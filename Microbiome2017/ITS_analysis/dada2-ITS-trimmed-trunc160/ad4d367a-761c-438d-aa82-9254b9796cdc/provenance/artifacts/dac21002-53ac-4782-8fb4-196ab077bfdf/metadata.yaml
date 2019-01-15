@@ -1,0 +1,3 @@
+uuid: dac21002-53ac-4782-8fb4-196ab077bfdf
+type: SampleData[PairedEndSequencesWithQuality]
+format: SingleLanePerSamplePairedEndFastqDirFmt
