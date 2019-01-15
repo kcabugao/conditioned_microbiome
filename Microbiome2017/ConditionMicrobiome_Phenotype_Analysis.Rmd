@@ -1,0 +1,86 @@
+---
+title: "*Sphagnum* Conditioned Microbiome Data and Figures"
+author: "Alyssa Carrell"
+date: "1/15/2019"
+output:
+  html_document:
+    fig_caption: yes
+    number_sections: no
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+
+library(captioner)
+fig_nums <- captioner(prefix = "Fig.")
+fig.1_cap <- fig_nums(name = "fig_1", 
+                        caption = "Growth rate of conditioned microbiome 2016")
+fig.2_cap <- fig_nums(name = "fig_2", 
+                        caption = "Growth rate of conditioned microbiome 2017")
+fig.3_cap <- fig_nums(name = "fig_3", 
+                        caption = "Maximum quantum yield of Sphagnum with applied microbiomes over duration of experiment 2016")
+
+fig.4_cap <- fig_nums(name = "fig_4", 
+                        caption = "Maximum quantum yield of Sphagnum with applied microbiomes over duration of experiment 2017")
+
+
+```
+
+# Introduction
+The use of microbiomes to select for specific plant host phenotypic response to environment have been demonstrated in recent studies. However, the underlying mechanisms for microbial mediated plant phenotypic response is unknown. Here we explore the mechanisms for microbial mediated host tolerance of elevated temperature. Microbiomes conditioned to ambient or elevated temperature were applied to moss and subjected to ambient or elevated temperatures. Fluorcam measurements were performed each week and the experiment was harvested at 4 weeks to assess plant growth and microbiome composition.
+
+# Experimental details
+
+**Experiment Start Date**	
+Experiment 1 - performed 2016  
+Experiment 2 - performed 2017
+	
+**Duration**	
+Experiment 1 - 4 weeks  
+Experiment 2 - 3 weeks
+	
+**Measurements taken**	
+Experiment 1 - Fluorcam weekly, area growth, 16S profile, RNA not extractable, pH measured  
+Experiment 2 - Fluorcam weekly, area growth, 16S profile, RNAseq, final pH, 15N and ARA 
+	
+**Methods**	
+Adapted microbe extraction and inoculation	From each treatment, 100 g of tissue was diced with sterile razor blade and pulverized in BG11 -N, pH 5.5 with a mortar and pestle. The resulting suspension was filtered through Mira Cloth and stored at 4 C until application. The microbes were then pelleted and resuspended in BG11 -N medium (pH5.5). A single capitula of axenic Sphagnum fallax was added to each well of a 12 well plate and inoculated with 2 ml of +0 microbiome, +9 microbiome, or sterile media. Warming conditions were determined from the 2016 summer season temperatures 
+
+# Phenotype data import and summary
+
+```{r}
+library(plyr)
+Exp1 <- read.csv("~/Desktop/Adapted_Microbiome_Experiment11.csv")
+
+Exp2 <- read.csv("~/Desktop/Adapted_Microbiome_Experiment2.csv")
+
+Exp1_data_summary <- ddply(Exp1, c("Chamber","Microbe"),summarize, N=length(Growth.rate.mmperday), mean=mean(Growth.rate.mmperday), sd=sd(Growth.rate.mmperday), se=sd/sqrt(N))
+
+Exp2_data_summary <- ddply(Exp2, c("Chamber","Microbe"),summarize, N=length(Growth.rate.mmperday), mean=mean(Growth.rate.mmperday, na.rm=TRUE), sd=sd(Growth.rate.mmperday, na.rm=TRUE), se=sd/sqrt(N))
+```
+ 
+```{r, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.1_cap}
+library(ggplot2)
+ggplot(Exp1_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
+  geom_bar(position=position_dodge(), stat = "identity") +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2,
+                position=position_dodge(0.9)) +
+  xlab(" Growth chamber") +ylab("Growth rate (mm/day)") + theme(axis.text=element_text(size=12),
+        axis.text.x = element_text(angle = 90, vjust = 0.5),
+        axis.title=element_text(size=16,face="bold"),
+        legend.text=element_text(size=16))
+```
+
+```{r, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.2_cap}
+library(ggplot2)
+ggplot(Exp2_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
+  geom_bar(position=position_dodge(), stat = "identity") +
+  geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2,
+                position=position_dodge(0.9)) +
+  xlab("Chamber") +ylab("Growth rate (mm/day)") + theme(axis.text=element_text(size=12),
+        axis.text.x = element_text(angle = 90, vjust = 0.5),
+        axis.title=element_text(size=16,face="bold"),
+        legend.text=element_text(size=16))
+```
