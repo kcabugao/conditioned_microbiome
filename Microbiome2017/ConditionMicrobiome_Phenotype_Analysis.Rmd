@@ -4,11 +4,14 @@ author: "Alyssa Carrell"
 date: "1/15/2019"
 output:
   html_document:
+    df_print: paged
+    code_folding: hide
     fig_caption: yes
     number_sections: no
     toc: yes
   pdf_document:
     toc: yes
+
 ---
 
 ```{r setup, include=FALSE}
@@ -24,7 +27,6 @@ fig.3_cap <- fig_nums(name = "fig_3",
 
 fig.4_cap <- fig_nums(name = "fig_4", 
                         caption = "Maximum quantum yield of Sphagnum with applied microbiomes over duration of experiment 2017")
-
 
 ```
 
@@ -48,21 +50,32 @@ Experiment 2 - Fluorcam weekly, area growth, 16S profile, RNAseq, final pH, 15N 
 **Methods**	
 Adapted microbe extraction and inoculation	From each treatment, 100 g of tissue was diced with sterile razor blade and pulverized in BG11 -N, pH 5.5 with a mortar and pestle. The resulting suspension was filtered through Mira Cloth and stored at 4 C until application. The microbes were then pelleted and resuspended in BG11 -N medium (pH5.5). A single capitula of axenic Sphagnum fallax was added to each well of a 12 well plate and inoculated with 2 ml of +0 microbiome, +9 microbiome, or sterile media. Warming conditions were determined from the 2016 summer season temperatures 
 
-# Phenotype data import and summary
-
+# Packages 
 ```{r}
-library(plyr)
-Exp1 <- read.csv("~/Desktop/Adapted_Microbiome_Experiment11.csv")
-
-Exp2 <- read.csv("~/Desktop/Adapted_Microbiome_Experiment2.csv")
-
-Exp1_data_summary <- ddply(Exp1, c("Chamber","Microbe"),summarize, N=length(Growth.rate.mmperday), mean=mean(Growth.rate.mmperday), sd=sd(Growth.rate.mmperday), se=sd/sqrt(N))
-
-Exp2_data_summary <- ddply(Exp2, c("Chamber","Microbe"),summarize, N=length(Growth.rate.mmperday), mean=mean(Growth.rate.mmperday, na.rm=TRUE), sd=sd(Growth.rate.mmperday, na.rm=TRUE), se=sd/sqrt(N))
+library(tidyverse)
+library(car)
+library(rcompanion)
+library(FSA)
 ```
- 
+
+# Experiment 1 Summary Statistics
+```{r Experiment 1 Dataset}
+Exp1 <- read.csv("~/Documents/Git/conditioned_microbiome/Microbiome2017/Adapted_Microbiome_Experiment1.csv", header = TRUE, na.strings = "NA", stringsAsFactors = TRUE)
+
+# summary 
+Exp1_data_summary <- Exp1 %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    N = length(Growth.rate.mmperday),
+    mean = mean(Growth.rate.mmperday),
+    sd = sd(Growth.rate.mmperday),
+    se = sd/sqrt(N)
+  )
+View(Exp1_data_summary)
+```
+
 ```{r, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.1_cap}
-library(ggplot2)
+
 ggplot(Exp1_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
   geom_bar(position=position_dodge(), stat = "identity") +
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2,
@@ -73,8 +86,28 @@ ggplot(Exp1_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
         legend.text=element_text(size=16))
 ```
 
+```{r Experiment 1 Histogram}
+ggplot(data = Exp1, aes(x = Growth.rate.mmperday)) + geom_histogram(binwidth = 0.5, aes(y = ..density..), colour = "black", fill = "white") + geom_density(alpha=0.2, fill="#FF6666") + ggtitle("Density Histogram of Experiment 1 Growth Rate") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth rate (mm/day)") + ylab("Density")
+```
+
+# Experiment 2 Summary Statistics
+```{r Experiment 2 Dataset}
+Exp2 <- read.csv("~/Documents/Git/conditioned_microbiome/Microbiome2017/Adapted_Microbiome_Experiment2.csv", header = TRUE, na.strings = "NA", stringsAsFactors = TRUE)
+
+# summary
+Exp2_data_summary <- Exp2 %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    N = length(Growth.rate.mmperday),
+    mean = mean(Growth.rate.mmperday, na.rm = TRUE),
+    sd = sd(Growth.rate.mmperday, na.rm = TRUE),
+    se = sd/sqrt(N)
+  )
+View(Exp2_data_summary)
+
+```
+
 ```{r, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.2_cap}
-library(ggplot2)
 ggplot(Exp2_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
   geom_bar(position=position_dodge(), stat = "identity") +
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2,
@@ -84,3 +117,477 @@ ggplot(Exp2_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
         axis.title=element_text(size=16,face="bold"),
         legend.text=element_text(size=16))
 ```
+
+```{r Exp 2 Histogram}
+ggplot(data = Exp2, aes(x = Growth.rate.mmperday)) + geom_histogram(binwidth = 0.5, aes(y = ..density..), colour = "black", fill = "white") + geom_density(alpha=0.2, fill="#FF6666") + ggtitle("Density Histogram of Experiment 2 Growth Rate") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth rate (mm/day)") + ylab("Density")
+```
+
+# Scheirer-Ray-Hare Test
+The SRH test is a nonparametric test used for a two-way factorial design. It is used for data that has two treatment variables (in this case, Chamber x Microbe) with two or more levels. It is an extension of the Kruskal-Wallis test, which is typically restricted to one-way ANOVAs. Like the Kruskal-Wallis, it relies on using ranks to evaluate the differences between factors rather than the actual values themsleves. Typically, the SRH test is more conservative than a two-way ANOVA. 
+
+## Experiment 1
+```{r Experiment 1}
+scheirerRayHare(Growth.rate.mmperday ~ Chamber + Microbe, ss = TRUE, data = Exp1) # same results as ANOVA
+exp1.dt <- dunnTest(Growth.rate.mmperday ~ Microbe, data = Exp1, method = "bh")
+exp1.let <- exp1.dt$res 
+cldList(P.adj ~ Comparison, data = exp1.let, threshold = 0.05)
+```
+
+In Experiment 1, the Scheirer-Ray-Hare test (SRH) indicates a significant influence of the microbial community on growth rate (p < 0.05), that depends on the chamber (p < 0.05). Although growth rate was not significantly different between Ambient and Elevated chambers, there is a significant interaction term that suggests that the influence of the microbial community in determining growth rate is different between Ambient and Elevated Chambers. These results confirm earlier ANOVA analysis. 
+
+## Experiment 2
+```{r Experiment 2}
+scheirerRayHare(Growth.rate.mmperday ~ Chamber + Microbe, ss = TRUE, data = Exp2)
+exp2.dt <- dunnTest(Growth.rate.mmperday ~ Microbe, data = Exp2, method = "bh")
+exp2.let <- exp2.dt$res 
+cldList(P.adj ~ Comparison, data = exp2.let, threshold = 0.05)
+```
+
+In Experiment 2, there were highly significant differences in growth rate between chambers (p < 0.01) and microbial communities (p< 0.001). On average, growth rate decreased by 41% in the Elevated chamber (AC mean = 1.268 mm/day; EC mean = 0.747 mm/day). The interaction term also confirms an Experiment 1 result that the influence of microbial communities on growth rate likely varies depending on the severity of the temperature in the chamber (p< 0.001). For example, moss inoculated with a microbial community conditioned in elevated temperatues had a growth rate over six times that of the control in the Elevated Chamber. In contrast, wihin the Ambient chamber, moss growth rates inoculated with microbial communities conditioned in elevated chambers was less than double that of the control.
+
+# Kruskall-Wallis
+## Growth rate by Chamber
+```{r}
+# testing chamber effect for experiment 1
+kruskal.test(Growth.rate.mmperday ~ Chamber, data = Exp1) # not significant
+
+# testing chamber effect for experiment 2
+kruskal.test(Growth.rate.mmperday ~ Chamber, data = Exp2) # significant
+```
+
+## Growth rate by Microbial Community
+### Experiment 1
+```{r Filter Data}
+exp1.ambient <- Exp1 %>% 
+  filter(Chamber == "AT")
+
+exp1.elevated <- Exp1 %>% 
+  filter(Chamber == "ET")
+```
+
+```{r Kruskal-Wallis}
+# Ambient
+kruskal.test(Growth.rate.mmperday ~ Microbe, data = exp1.ambient) # not significant
+
+# Elevated
+kruskal.test(Growth.rate.mmperday ~ Microbe, data = exp1.elevated) # significant
+exp1.elevated.dt <- dunnTest(Growth.rate.mmperday ~ Microbe, data = exp1.elevated, method = "bh")
+exp1.elevated.let <- exp1.elevated.dt$res
+cldList(P.adj ~ Comparison, data = exp1.elevated.let, threshold = 0.05)
+# main difference is Contol - EC like parametric
+```
+
+### Experiment 2
+```{r Exp 2 - Filter Data}
+exp2.ambient <- Exp2 %>% 
+  filter(Chamber == "AT")
+
+exp2.elevated <- Exp2 %>% 
+  filter(Chamber == "ET")
+```
+
+```{r Exp 2 - Kruskall-Wallis}
+# Ambient
+kruskal.test(Growth.rate.mmperday ~ Microbe, data = exp2.ambient) # significant
+exp2.ambient.dt <- dunnTest(Growth.rate.mmperday ~ Microbe, data = exp2.ambient, method = "bh")
+exp2.ambient.let <- exp2.ambient.dt$res
+cldList(P.adj ~ Comparison, data = exp2.ambient.let, threshold = 0.05)
+
+# Elevated
+kruskal.test(Growth.rate.mmperday ~ Microbe, data = exp2.elevated) # highly significant
+exp2.elevated.dt <- dunnTest(Growth.rate.mmperday ~ Microbe, data = exp2.elevated, method = "bh")
+exp2.elevated.let <- exp2.elevated.dt$res
+cldList(P.adj ~ Comparison, data = exp2.elevated.let, threshold = 0.05)
+# main difference is Contol - EC like parametric
+```
+
+# QY Max
+## Experiment 1 QY
+### Week 0
+```{r Wk 0 Summary}
+wk0.sum2 <- Exp1 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.0) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.0),
+    sd = sd(QY_max.0),
+    se = ((sd(QY_max.0))/sqrt(n))
+  )
+
+ggplot(data = wk0.sum2, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk0
+exp1.wk0.sch <- scheirerRayHare(QY_max.0 ~ Chamber + Microbe, ss = TRUE, data = Exp1) # significant difference between chambers
+
+# Kruskal-Wallis
+kruskal.test(QY_max.0 ~ Chamber, data = Exp1) # significant like SRH
+kruskal.test(QY_max.0 ~ Microbe, data = Exp1) # not significant like SRH
+```
+
+### Week 1
+```{r Wk 1 Summary}
+wk1.sum <- Exp1 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.1) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.1),
+    sd = sd(QY_max.1),
+    se = ((sd(QY_max.1))/sqrt(n))
+  )
+
+ggplot(data = wk1.sum, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk1
+exp1.wk1.sch <- scheirerRayHare(QY_max.1 ~ Chamber + Microbe, ss = TRUE, data = Exp1) # significant interaction between chambers
+
+# Kruskal-Wallis
+kruskal.test(QY_max.1 ~ Chamber, data = Exp1) # not significant like SRH
+kruskal.test(QY_max.1 ~ Microbe, data = Exp1) # not significant like SRH
+
+```
+
+### Week 2
+```{r}
+wk2.sum <- Exp1 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.2) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.2),
+    sd = sd(QY_max.2),
+    se = ((sd(QY_max.2))/sqrt(n))
+  )
+
+ggplot(data = wk2.sum, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk1
+exp1.wk2.sch <- scheirerRayHare(QY_max.2 ~ Chamber + Microbe, ss = TRUE, data = Exp1) # not significant
+
+# Kruskal-Wallis
+kruskal.test(QY_max.2 ~ Chamber, data = Exp1) # not significant like SRH
+kruskal.test(QY_max.2 ~ Microbe, data = Exp1) # not significant like SRH
+
+```
+
+### Week 3
+```{r}
+wk3.sum <- Exp1 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.3) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.3),
+    sd = sd(QY_max.3),
+    se = ((sd(QY_max.3))/sqrt(n))
+  )
+
+ggplot(data = wk3.sum, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk3
+exp1.wk3.sch <- scheirerRayHare(QY_max.3 ~ Chamber + Microbe, ss = TRUE, data = Exp1) # significant interaction term
+
+# Kruskal-Wallis
+kruskal.test(QY_max.3 ~ Chamber, data = Exp1) # not significant like SRH
+kruskal.test(QY_max.3 ~ Microbe, data = Exp1) # not significant like SRH
+
+```
+
+### Week 4
+```{r}
+wk4.sum <- Exp1 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.4) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.4, na.rm = TRUE),
+    sd = sd(QY_max.4, na.rm = TRUE),
+    se = ((sd(QY_max.4, na.rm = TRUE))/sqrt(n))
+  )
+
+ggplot(data = wk4.sum, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk4
+exp1.wk4.sch <- scheirerRayHare(QY_max.4 ~ Chamber + Microbe, ss = TRUE, data = Exp1) # significant interaction term
+
+# Kruskal-Wallis
+kruskal.test(QY_max.4 ~ Chamber, data = Exp1) # not significant like SRH
+kruskal.test(QY_max.4 ~ Microbe, data = Exp1) # not significant like SRH
+```
+
+In general, there was no significant main effects of the microbial community on QY_Max across the four weeks of Experiment 1.  The temperature of the chamber, not the microbial community, appeared to regulate QY_Max heavily in Weeks 0 and 1, though only until Week 3. As the experiment progressed, cross-over interactions between chamber temperature and microbial communities led to significant interaction terms (p < 0.05), despite no main effect of the microbial community. This suggests that QY_Max likely depends on how microbial communities influence moss within each chamber despite hte lack of a main effect. 
+
+## Experiment 2 QY
+### Week 0
+```{r}
+
+wk0.sum2 <- Exp2 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.0) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.0),
+    sd = sd(QY_max.0),
+    se = ((sd(QY_max.0))/sqrt(n))
+  )
+
+ggplot(data = wk0.sum2, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk0
+scheirerRayHare(QY_max.0 ~ Chamber + Microbe, ss = TRUE, data = Exp2) # significant difference between Microbes + Interaction
+exp2.wk0.dt <- dunnTest(QY_max.0 ~ Microbe, data = Exp2, method = "bh")
+exp2.wk0.let <- exp2.wk0.dt$res 
+cldList(P.adj ~ Comparison, data = exp2.wk0.let, threshold = 0.05)
+
+# Kruskal-Wallis
+kruskal.test(QY_max.0 ~ Chamber, data = Exp2) # not significant like SRH
+kruskal.test(QY_max.0 ~ Microbe, data = Exp2) # significant like SRH
+```
+
+### Week 1
+```{r}
+wk1.sum2 <- Exp2 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.2) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.2),
+    sd = sd(QY_max.2),
+    se = ((sd(QY_max.2))/sqrt(n))
+  )
+
+ggplot(data = wk1.sum2, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk1
+scheirerRayHare(QY_max.1 ~ Chamber + Microbe, ss = TRUE, data = Exp2) # significant for microbe
+
+# Kruskal-Wallis
+kruskal.test(QY_max.1 ~ Chamber, data = Exp2) # not significant like SRH
+kruskal.test(QY_max.1 ~ Microbe, data = Exp2) # significant like SRH
+exp2.wk1.dt <- dunnTest(QY_max.1 ~ Microbe, data = Exp2, method = "bh")
+exp2.wk1.let <- exp2.wk1.dt$res 
+cldList(P.adj ~ Comparison, data = exp2.wk1.let, threshold = 0.05)
+```
+
+### Week 2
+```{r}
+wk2.sum2 <- Exp2 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.2) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.2),
+    sd = sd(QY_max.2),
+    se = ((sd(QY_max.2))/sqrt(n))
+  )
+
+ggplot(data = wk2.sum2, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk2
+scheirerRayHare(QY_max.2 ~ Chamber + Microbe, ss = TRUE, data = Exp2) # significant chamber and microbe but not interaction
+
+# Kruskal-Wallis
+kruskal.test(QY_max.2 ~ Chamber, data = Exp2) # significant like SRH
+kruskal.test(QY_max.2 ~ Microbe, data = Exp2) # not significant like SRH
+
+exp2.wk2.dt <- dunnTest(QY_max.2 ~ Microbe, data = Exp2, method = "bh")
+exp2.wk2.let <- exp2.wk2.dt$res 
+cldList(P.adj ~ Comparison, data = exp2.wk2.let, threshold = 0.05)
+
+```
+
+### Week 3
+```{r}
+wk3.sum2 <- Exp2 %>% 
+  dplyr::select(Sample, Chamber, Microbe, QY_max.3) %>% 
+  group_by(Chamber, Microbe) %>% 
+  summarise(
+    n = n(),
+    mean = mean(QY_max.3, na.rm = TRUE),
+    sd = sd(QY_max.3, na.rm = TRUE),
+    se = ((sd(QY_max.3, na.rm = TRUE))/sqrt(n))
+  )
+
+ggplot(data = wk3.sum, aes(x = Microbe, y = mean)) + geom_bar(stat = "identity", colour = "black") + geom_errorbar(aes(ymin = mean-sd, ymax= mean+sd), width = 0.2) + facet_grid(. ~ Chamber) + scale_x_discrete(limits = c("Control", "AC", "EC"), labels = c("Control", "Ambient", "Elevated")) + xlab("Microbial Community") + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank())
+
+# SRH for Wk3
+scheirerRayHare(QY_max.3 ~ Chamber + Microbe, ss = TRUE, data = Exp2) # significant chamber
+
+# Kruskal-Wallis
+kruskal.test(QY_max.3 ~ Chamber, data = Exp2) # significant like SRH
+kruskal.test(QY_max.3 ~ Microbe, data = Exp2) # not significant like SRH
+
+```
+
+The conditioned microbiome was a primary determinant of QY_Max in Experiment 2. With the exception of the last week (Week 3), the microbiome was the most significant factor in QY_Max. In contrast to Experiment 1, there was only one instance where there appeared to be a strong interaction between the conditioned microbiome and the chamber (Week 2). Typically, it was the microbiome that drove differences in QY_Max between and within both chambers. 
+
+# Experiment 1 ANOVA
+## ANOVA
+```{r}
+exp1.aov <- aov(Growth.rate.mmperday ~ Chamber + Microbe + Chamber:Microbe , data = Exp1)
+summary(exp1.aov)
+TukeyHSD(exp1.aov)
+
+# testing homogeneity of variance
+plot(exp1.aov, 1)
+leveneTest(Growth.rate.mmperday ~ Chamber*Microbe, data = Exp1) # p > 0.05. no violation
+
+# testing normality
+plot(exp1.aov, 2)
+shapiro.test(Exp1$Growth.rate.mmperday) # p > 0.05. technically normally distributed
+```
+
+Overall, growth did not differ between the Ambient and Elevated chambers ( p = 0.12). However, while the amount of growth did not differ, there were significant differences in where the growth occurred. Moss grown with microbes, regardless of whether they were conditioned from ambient or elevated chambers were significantly different from control plants (p < 0.05). Within the ambient chambers, moss growth with microbes conditioned from the ambient chamber (AT_AC) did not differ significantly from the control (p=0.50). Similarly, the differences between moss grown with microbes conditioned from the elevated chamber (AT_EC) did not significantly differ from AT_AC (p = 0.60).
+
+Within the elevated chamber, moss grown with microbes from the ambient chamber (ET_AC) did not differ from the control (p = 0.40). The difference between ET_AC and moss growth with microbes from the elvated chamber (ET_EC) is also not significant (p = 0.17). However, the difference between ET_EC and the elevated chamber is highly significant (p < 0.01). Although the benefit of having a microbiome in general was not apparent when comparing ET_AC and ET_EC relative to the control, it was clear that having microbiome pre-conditioned to cope with elevated temperatures provided a significant benefit. 
+
+## Experiment 1 Transformations
+```{r}
+# dealing with zeros in dataset
+exp1.growth <- Exp1 %>% 
+  mutate(growth = Growth.rate.mmperday + 1)
+shapiro.test(exp1.growth$growth)
+```
+
+### Log 
+```{r}
+growth1.log <- log(exp1.growth$growth) # using log (x +1)
+exp1.growth <- cbind(exp1.growth, growth1.log)
+ggplot(data = exp1.growth, aes(x = growth1.log)) + geom_histogram() + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Log Growth Rate") + ylab("Count")
+
+trans.aov <- aov(growth1.log ~ Chamber*Microbe, data = exp1.growth)
+summary(trans.aov) # removes significance of microbe
+
+plot(trans.aov, 2)
+shapiro.test(exp1.growth$growth1.log)
+```
+
+### Cube root
+```{r}
+growth1.cube <- exp1.growth$growth^(1/3)
+exp1.growth <- cbind(exp1.growth, growth1.cube)
+ggplot(data = exp1.growth, aes(x = growth1.cube)) + geom_histogram()  + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth Rate ^ (1/3)") + ylab("Count")
+shapiro.test(exp1.growth$growth1.cube) 
+```
+
+### Square Root
+```{r}
+growth1.sqrt <- sqrt(exp1.growth$growth)
+exp1.growth <- cbind(exp1.growth, growth1.sqrt)
+ggplot(data = exp1.growth, aes(x = growth1.sqrt)) + geom_histogram() + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth Rate Square Root") + ylab("Count")
+```
+
+### BoxCox
+```{r}
+growth1 <- exp1.growth$growth # using (x+1)
+box <- boxCox(growth1 ~ 1, lambda = seq(-6, 6, 0.1)) # trying lambda values -6 to 6 by increments of 0.1
+cox <- data.frame(box$x, box$y) # lambda results dataframe
+cox.ordered <- cox[with(cox, order(-cox$box.y)), ] # ordered by decreasing y 
+cox.ordered[1, ] # the lambda (x) with the greatest log likelihood
+growth1.box <- ((growth1 ^ 0.9) -1)/0.9 # transforming the variable
+exp1.growth <- cbind(exp1.growth, growth1.box) # merging with the dataset
+
+ggplot(data = exp1.growth, aes(x = growth1.box)) + geom_histogram() + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth Rate BoxCox") + ylab("Count")
+
+boxcox.aov <- aov(growth1.box ~ Chamber*Microbe, data = exp1.growth)
+summary(boxcox.aov) # shows that only ET:EC and ET:Control are significant
+TukeyHSD(boxcox.aov)
+
+# variance
+plot(boxcox.aov, 1)
+leveneTest(growth1.box ~ Chamber*Microbe, data = exp1.growth) # no violation
+
+# normality
+plot(boxcox.aov,2)
+shapiro.test(exp1.growth$growth1.box) # p > 0.05. normal data
+```
+
+# Experiment 2 ANOVA 
+## ANOVA
+```{r}
+exp2.aov <- aov(Growth.rate.mmperday ~ Chamber + Microbe + Chamber:Microbe , data = Exp2)
+summary(exp2.aov)
+TukeyHSD(exp2.aov)
+
+# testing homogeneity of variance
+plot(exp2.aov, 1)
+leveneTest(Growth.rate.mmperday ~ Chamber*Microbe, data = Exp2) # p < 0.05. variance is violated
+
+# testing normality
+plot(exp2.aov, 2)
+shapiro.test(Exp2$Growth.rate.mmperday) # p < 0.05. normality is violated
+```
+
+## Experiment 2 Transformations
+```{r}
+# dealing with zeros in dataset
+exp2.growth <- Exp2 %>% 
+  mutate(growth = Growth.rate.mmperday + 1)
+shapiro.test(exp2.growth$growth)
+```
+
+### Log 
+```{r}
+growth2.log <- log(exp2.growth$growth) # using log (x +1)
+exp2.growth <- cbind(exp2.growth, growth2.log)
+ggplot(data = exp2.growth, aes(x = growth2.log)) + geom_histogram() + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Log Growth Rate") + ylab("Count")
+
+trans.aov <- aov(growth2.log ~ Chamber*Microbe, data = exp2.growth)
+summary(trans.aov) 
+
+plot(trans.aov, 2)
+shapiro.test(exp2.growth$growth2.log) # normality still violated
+levene.test(growth2.log ~ Chamber*Microbe, data = exp2.growth) # variance still violated
+```
+
+### Cube root
+```{r}
+growth2.cube <- exp2.growth$growth^(1/3)
+exp2.growth <- cbind(exp2.growth, growth2.cube)
+ggplot(data = exp2.growth, aes(x = growth2.cube)) + geom_histogram()  + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth Rate ^ (1/3)") + ylab("Count")
+
+shapiro.test(exp2.growth$growth2.cube) #normality still violated
+leveneTest(growth2.cube ~ Chamber*Microbe, data = exp2.growth) # variance still violated
+```
+
+### Square Root
+```{r}
+growth2.sqrt <- sqrt(exp2.growth$growth)
+exp2.growth <- cbind(exp2.growth, growth2.sqrt)
+ggplot(data = exp2.growth, aes(x = growth2.sqrt)) + geom_histogram() + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth Rate Square Root") + ylab("Count")
+
+shapiro.test(exp2.growth$growth2.sqrt) #normality still violated
+leveneTest(growth2.sqrt ~ Chamber*Microbe, data = exp2.growth) # variance still violated
+```
+
+### BoxCox
+```{r}
+
+box2 <- boxCox(exp2.growth$growth ~ 1, lambda = seq(-6, 6, 0.1)) 
+cox2 <- data.frame(box2$x, box2$y) 
+cox.ordered2 <- cox2[with(cox2, order(-cox2$box2.y)), ] 
+cox.ordered2[1, ] # the lambda (x) with the greatest log likelihood
+growth2.box <- ((exp2.growth$growth ^ 2) -2)/2 # transforming the variable
+exp2.growth <- cbind(exp2.growth, growth2.box) # merging with the dataset
+
+ggplot(data = exp2.growth, aes(x = growth2.box)) + geom_histogram() + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth Rate BoxCox") + ylab("Count")
+
+boxcox2.aov <- aov(growth2.box ~ Chamber*Microbe, data = exp2.growth)
+summary(boxcox2.aov) 
+TukeyHSD(boxcox2.aov)
+
+# variance
+plot(boxcox2.aov, 1)
+leveneTest(growth2.box ~ Chamber*Microbe, data = exp2.growth) # violation. better than others.
+
+# normality
+plot(boxcox2.aov,2)
+shapiro.test(exp2.growth$growth2.box) # violation
+```
+
+# Sources
+http://rcompanion.org/handbook/F_14.html
+http://rcompanion.org/rcompanion/d_06.html
+http://rcompanion.org/handbook/F_08.html
+https://stackoverflow.com/questions/31434166/which-post-hoc-test-should-i-conduct-after-doing-a-kruskal-wallis
