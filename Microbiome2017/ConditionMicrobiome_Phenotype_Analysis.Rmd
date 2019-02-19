@@ -92,6 +92,7 @@ ggplot(data = Exp1, aes(x = Growth.rate.mmperday)) + geom_histogram(binwidth = 0
 ```
 
 ## Exp 1 Rank Transform
+
 ```{r}
 
 # rank transform
@@ -105,6 +106,10 @@ ranked.exp1.aov <- aov(exp1.rank ~ Chamber + Microbe + Chamber:Microbe , data = 
 Anova(ranked.exp1.aov, type = 3)
 TukeyHSD(ranked.exp1.aov)
 ```
+
+Growth data was rank transformed prior to performing a standard two-way ANOVA. Growth rate in each chamber was dependant on microbial community (p < 0.01). Within the Ambient Temperature (AT) chamber there were no differences in moss growth rate among the three microbial treatments. Growth rate of moss inoculated with an Ambient Temperature Conditioned microbiome (AC) did not differ from the control or moss inoculated with an Elevated Temperature Conditioned microbiome (EC). However, within the Elevated Temperature (ET) chamber, moss growth rate was significantly different between EC and control (p < 0.01). Moss grown with AC and the control had relatively similar growth rates, suggesting that changes in growth rate are not simply due to having a microbiome. Rather, the advantage does appear to be driven by a microbiome pre-adapted to elevated temperatures. 
+
+Between the two chambers, there were no differences in growth rate of AC, Control, and EC. For example, moss grown without a microbiome had a similar growth rate regardless of temperature.
 
 # Experiment 2 Summary Statistics
 ```{r Experiment 2 Dataset, echo=FALSE, warning=FALSE}
@@ -152,6 +157,12 @@ ranked.exp2.aov <- aov(exp2.rank ~ Chamber + Microbe + Chamber:Microbe , data = 
 Anova(ranked.exp2.aov, type = 3)
 TukeyHSD(ranked.exp2.aov)
 ```
+
+Differences in moss growth rate were based on the influence of microbial treatments in the chambers (p <0.001). Within the ambient temperature chamber (AT), moss grown with AC and moss grown with EC increased growth rate relative to the control (p < 0.05). However, there were no differences in growth between AC and EC suggesting that under ambient temperature, microbial inoculation increases growth irregardless of microbial community diversity. 
+
+Elevated temperatures differentiated the influence of the microbial community on moss growth rate. Moss inoculated with a microbial community conditioned in elevated temperatures had high rates of growth despite elevated temperatures with respect to moss grown with ambient conditioned microbiomes (AC) and the control (p < 0.001). Furthermore, AC moss and control moss did not differ in growth rate suggesting that it is specifically a pre-adapted microbiome that imparts moss with the capacity to tolerate elevated temperatures. 
+
+When comparing microbial treatments across chambers, it is apparent that elevated temperatures severely decreased growth of moss with AC and moss control. Only moss inoculated with EC showed no difference in growth regardless of ambient or elevated temperatures. This indicates that the presence of microbial members capable of surviving in elevated temperatures is generally beneficial, but is especially critical in rising temperatures. 
 
 # Experiment 1 QY
 ## Week 0
