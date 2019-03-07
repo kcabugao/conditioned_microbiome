@@ -102,9 +102,17 @@ exp1.rank <- rank(Exp1$Growth.rate.mmperday)
 Exp1 <- cbind(Exp1, exp1.rank)
 
 # two-way ANOVA with ranked data
-ranked.exp1.aov <- aov(exp1.rank ~ Chamber + Microbe + Chamber:Microbe , data = Exp1)
+library(car)
+ ranked.exp1.aov <- aov(exp1.rank ~ Chamber + Microbe + Chamber:Microbe , data = Exp1)
 Anova(ranked.exp1.aov, type = 3)
 TukeyHSD(ranked.exp1.aov)
+
+# compact letter displays 
+library(agricolae)
+tx <- with(Exp1, interaction(Chamber, Microbe))
+amod <- aov(exp1.rank ~ tx, data = Exp1)
+groups <- HSD.test(amod, "tx", group = TRUE)
+groups
 ```
 
 Growth data was rank transformed prior to performing a standard two-way ANOVA. Growth rate in each chamber was dependant on microbial community (p < 0.01). Within the Ambient Temperature (AT) chamber there were no differences in moss growth rate among the three microbial treatments. Growth rate of moss inoculated with an Ambient Temperature Conditioned microbiome (AC) did not differ from the control or moss inoculated with an Elevated Temperature Conditioned microbiome (EC). However, within the Elevated Temperature (ET) chamber, moss growth rate was significantly different between EC and control (p < 0.01). Moss grown with AC and the control had relatively similar growth rates, suggesting that changes in growth rate are not simply due to having a microbiome. Rather, the advantage does appear to be driven by a microbiome pre-adapted to elevated temperatures. 
@@ -156,6 +164,13 @@ Exp2 <- cbind(Exp2, exp2.rank)
 ranked.exp2.aov <- aov(exp2.rank ~ Chamber + Microbe + Chamber:Microbe , data = Exp2)
 Anova(ranked.exp2.aov, type = 3)
 TukeyHSD(ranked.exp2.aov)
+
+# compact letter displays 
+library(agricolae)
+tx <- with(Exp2, interaction(Chamber, Microbe))
+amod <- aov(exp2.rank ~ tx, data = Exp2)
+groups <- HSD.test(amod, "tx", group = TRUE)
+groups
 ```
 
 Differences in moss growth rate were based on the influence of microbial treatments in the chambers (p <0.001). Within the ambient temperature chamber (AT), moss grown with AC and moss grown with EC increased growth rate relative to the control (p < 0.05). However, there were no differences in growth between AC and EC suggesting that under ambient temperature, microbial inoculation increases growth irregardless of microbial community diversity. 
