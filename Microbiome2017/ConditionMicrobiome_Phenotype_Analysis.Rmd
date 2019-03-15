@@ -61,7 +61,7 @@ fig.4_cap <- fig_nums(name = "fig_4",
 # Experiment 1 Summary Statistics
 
 ```{r Experiment 1 Dataset, echo=FALSE, warning=FALSE}
-Exp1 <- read.csv("~/Documents/Git/conditioned_microbiome/Microbiome2017/Adapted_Microbiome_Experiment1.csv", header = TRUE, na.strings = "NA", stringsAsFactors = TRUE)
+Exp1 <- read.csv("~/Documents/Git/conditioned_microbiome/Microbiome2017/Adapted_Microbiome_Experiment1.csv", header = TRUE, stringsAsFactors = TRUE, na.strings = "NA")
 
 # summary 
 Exp1_data_summary <- Exp1 %>% 
@@ -277,6 +277,41 @@ kruskal.test(QY_max.4 ~ Microbe, data = Exp1) # not significant like SRH
 ```
 
 In general, there was no significant main effects of the microbial community on QY_Max across the four weeks of Experiment 1.  The temperature of the chamber, not the microbial community, appeared to regulate QY_Max heavily in Weeks 0 and 1, though only until Week 3. As the experiment progressed, cross-over interactions between chamber temperature and microbial communities led to significant interaction terms (p < 0.05), despite no main effect of the microbial community. This suggests that QY_Max likely depends on how microbial communities influence moss within each chamber despite hte lack of a main effect. 
+
+## Experiment 1 Mortality
+Mortality rate is usually expressed as **death** in a defined **population** during a specified **interval**. In this case, we do not necessarily have individual death per day or per each week. Therefore, percent loss of fluorescence from Week 0 QY will be used as proxy to represent moss death as the treatment continues.
+
+```{r Percent Loss}
+# isolating just the QY data
+exp1.qy <- Exp1 %>% 
+  select(Sample, Chamber, Microbe, Growth.rate.mmperday, QY_max.4, QY_max.0) %>% 
+  mutate(percent_loss = ((QY_max.0 - QY_max.4)/QY_max.0)*100) %>% 
+  mutate(total_growth = Growth.rate.mmperday*35) # 35 days total from start to finish
+View(exp1.qy)
+
+# plot of percent loss
+ggplot(data = exp1.qy, aes(x = Microbe, y = percent_loss)) + geom_boxplot() + geom_point(aes(x = Microbe), position = position_dodge(0.6)) + facet_grid(. ~ Chamber)
+
+# plot of total growth
+ggplot(data = exp1.qy, aes(x = Microbe, y = total_growth)) + geom_boxplot() + geom_point(aes(x = Microbe), position = position_dodge(0.6)) + facet_grid(. ~ Chamber)
+
+```
+
+```{r Percent Loss ANOVA}
+
+qyloss.aov <- aov(percent_loss ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
+summary(qyloss.aov)
+
+# rank transforming percentage data
+qy1.rank <- rank(exp1.qy$percent_loss)
+exp1.qy <- cbind(exp1.qy, qy1.rank)
+
+qyloss.rank.aov <- aov(qy1.rank ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
+summary(qyloss.rank.aov) # cross-over interaction -> no overall effect on percent loss BUT the effect of microbe on percent loss is opposite depending on chamber. 
+
+TukeyHSD(qyloss.rank.aov)
+```
+
 
 # Experiment 2 QY
 ## Week 0
