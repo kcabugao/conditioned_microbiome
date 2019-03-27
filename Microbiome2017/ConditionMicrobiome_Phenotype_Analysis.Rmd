@@ -199,17 +199,22 @@ Mortality rate is usually expressed as **death** in a defined **population** dur
 
 ```{r Percent Loss}
 # isolating just the QY data
+# calculating percent left (100% - percent loss)
 exp1.qy.loss <- Exp1 %>% 
-  dplyr::select(Sample, Chamber, Microbe, Growth.rate.mmperday, QY_max.4, QY_max.0) %>% 
-  mutate(percent_loss = ((QY_max.0 - QY_max.4)/QY_max.0)*100) %>% 
-  mutate(total_growth = Growth.rate.mmperday*35) # 35 days total from start to finish
+  dplyr::select(Sample, Chamber, Microbe, QY_max.1, QY_max.2, QY_max.3, QY_max.4, QY_max.0) %>%
+  mutate(percent_loss1 = (100 - (((QY_max.0 - QY_max.1)/QY_max.0)*100))) %>% 
+  mutate(percent_loss2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
+  mutate(percent_loss3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100))) %>%  
+  mutate(percent_loss4 = (100 - (((QY_max.0 - QY_max.4)/QY_max.0)*100))) 
+View(exp1.qy.loss)
 
-# plot of percent loss
-ggplot(data = exp1.qy.loss, aes(x = Microbe, y = percent_loss)) + geom_boxplot() + geom_point(aes(x = Microbe), position = position_dodge(0.6)) + facet_grid(. ~ Chamber)
+# plot of percent left
+exp1.qy.timeloss <- exp1.qy.loss %>% 
+  dplyr::select(Chamber, Microbe, percent_loss1, percent_loss2, percent_loss3, percent_loss4)  %>% 
+  melt(id = c("Chamber", "Microbe"))
+View(exp1.qy.timeloss)
 
-# plot of total growth
-ggplot(data = exp1.qy, aes(x = Microbe, y = total_growth)) + geom_boxplot() + geom_point(aes(x = Microbe), position = position_dodge(0.6)) + facet_grid(. ~ Chamber)
-
+ggplot(data = exp1.qy.timeloss, aes(x = variable, y = value)) + geom_point() + facet_grid(Microbe ~ Chamber)
 ```
 
 ```{r Percent Loss ANOVA}
@@ -348,19 +353,24 @@ wk3.sum2 <- Exp2 %>%
 ```
 
 ## Percent Loss
+Question, why the NAs? Were those dead or just not measured?
 ```{r}
 # isolating just the QY data
+# calculating percent left (100% - percent loss)
 exp2.qy.loss <- Exp2 %>% 
-  select(Sample, Chamber, Microbe, Growth.rate.mmperday, QY_max.3, QY_max.0) %>% 
-  mutate(percent_loss = ((QY_max.0 - QY_max.3)/QY_max.0)*100) %>% 
-  mutate(total_growth = Growth.rate.mmperday*35) # 35 days total from start to finish
-View
+  dplyr::select(Sample, Chamber, Microbe, QY_max.1, QY_max.2, QY_max.3, QY_max.0) %>%
+  mutate(percent_loss1 = (100 - (((QY_max.0 - QY_max.1)/QY_max.0)*100))) %>% 
+  mutate(percent_loss2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
+  mutate(percent_loss3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100)))
+View(exp2.qy.loss)
 
-# plot of percent loss
-ggplot(data = exp2.qy.loss, aes(x = Microbe, y = percent_loss)) + geom_boxplot() + geom_point(aes(x = Microbe), position = position_dodge(0.6)) + facet_grid(. ~ Chamber)
+# plot of percent left
+exp2.qy.timeloss <- exp2.qy.loss %>% 
+  dplyr::select(Chamber, Microbe, percent_loss1, percent_loss2, percent_loss3)  %>% 
+  melt(id = c("Chamber", "Microbe"))
+View(exp2.qy.timeloss)
 
-# plot of total growth
-ggplot(data = exp1.qy, aes(x = Microbe, y = total_growth)) + geom_boxplot() + geom_point(aes(x = Microbe), position = position_dodge(0.6)) + facet_grid(. ~ Chamber)
+ggplot(data = exp2.qy.timeloss, aes(x = variable, y = value)) + geom_point() + facet_grid(Microbe ~ Chamber)
 ```
 
 ```{r}
