@@ -201,25 +201,39 @@ Mortality rate is usually expressed as **death** in a defined **population** dur
 # isolating just the QY data
 # calculating percent left (100% - percent loss)
 exp1.qy.loss <- Exp1 %>% 
-  dplyr::select(Sample, Chamber, Microbe, QY_max.1, QY_max.2, QY_max.3, QY_max.4, QY_max.0) %>%
+  dplyr::select(Chamber, Microbe, QY_max.1, QY_max.2, QY_max.3, QY_max.4, QY_max.0) %>%
   mutate(percent_loss1 = (100 - (((QY_max.0 - QY_max.1)/QY_max.0)*100))) %>% 
   mutate(percent_loss2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
   mutate(percent_loss3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100))) %>%  
   mutate(percent_loss4 = (100 - (((QY_max.0 - QY_max.4)/QY_max.0)*100))) 
 View(exp1.qy.loss)
 
+# summary percent left
+exp1.qyleft <- exp1.qy.loss %>% 
+  select(Chamber, Microbe, percent_loss1, percent_loss2,percent_loss3, percent_loss4) %>% 
+   group_by(Chamber, Microbe) %>% 
+   summarise_all(funs(mean, sd))
+View(exp1.qyleft)
+  
 # plot of percent left
-exp1.qy.timeloss <- exp1.qy.loss %>% 
+exp1.qy.loss <- exp1.qy.loss %>% 
   dplyr::select(Chamber, Microbe, percent_loss1, percent_loss2, percent_loss3, percent_loss4)  %>% 
   melt(id = c("Chamber", "Microbe"))
-View(exp1.qy.timeloss)
+View(exp1.qy.loss)
 
-ggplot(data = exp1.qy.timeloss, aes(x = variable, y = value)) + geom_point() + facet_grid(Microbe ~ Chamber)
+# mean over time
+ggplot(data = exp1.qy.loss, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3", "percent_loss4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+
+# boxplot over time
+test <- ggplot(data = exp1.qy.loss, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3", "percent_loss4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
+
 ```
 
+
+## Percent Loss ANOVA
 ```{r Percent Loss ANOVA}
 
-qyloss.aov <- aov(percent_loss ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
+qyloss.aov <- aov(value ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
 summary(qyloss.aov)
 
 # rank transforming percentage data
@@ -364,13 +378,24 @@ exp2.qy.loss <- Exp2 %>%
   mutate(percent_loss3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100)))
 View(exp2.qy.loss)
 
+# summary percent left
+exp2.qyleft <- exp2.qy.loss %>% 
+  select(Chamber, Microbe, percent_loss1, percent_loss2,percent_loss3) %>% 
+   group_by(Chamber, Microbe) %>% 
+   summarise_all(funs(mean, sd))
+View(exp2.qyleft)
+
 # plot of percent left
-exp2.qy.timeloss <- exp2.qy.loss %>% 
+exp2.qy.left <- exp1.qy.left %>% 
   dplyr::select(Chamber, Microbe, percent_loss1, percent_loss2, percent_loss3)  %>% 
   melt(id = c("Chamber", "Microbe"))
-View(exp2.qy.timeloss)
+View(exp2.qy.left)
 
-ggplot(data = exp2.qy.timeloss, aes(x = variable, y = value)) + geom_point() + facet_grid(Microbe ~ Chamber)
+# mean over time
+ggplot(data = exp2.qy.loss, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+
+# boxplot over time
+test <- ggplot(data = exp2.qy.loss, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
 ```
 
 ```{r}
