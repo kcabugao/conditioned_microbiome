@@ -41,6 +41,7 @@ library(rcompanion)
 library(FSA)
 library(agricolae)
 library(reshape2)
+library(plotrix)
 ```
 
 
@@ -77,7 +78,7 @@ Exp1_data_summary <- Exp1 %>%
   )
 ```
 
-```{r, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.1_cap}
+```{r Figure 1, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.1_cap}
 
 ggplot(Exp1_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
   geom_bar(position=position_dodge(), stat = "identity") +
@@ -94,7 +95,7 @@ ggplot(data = Exp1, aes(x = Growth.rate.mmperday)) + geom_histogram(binwidth = 0
 ```
 
 ## Rank Transform
-```{r}
+```{r Exp 1. Ranked ANOVA}
 exp1.rank <- rank(Exp1$Growth.rate.mmperday)
 
 # binding transform
@@ -117,17 +118,16 @@ Growth data was rank transformed prior to performing a standard two-way ANOVA. G
 Between the two chambers, there were no differences in growth rate of AC, Control, and EC. For example, moss grown without a microbiome had a similar growth rate regardless of temperature.
 
 ## QY 
-```{r}
+```{r Exp 1. Weekly QY Figure}
 exp1.qy <- Exp1 %>% 
   select(Chamber, Microbe, QY_max.4, QY_max.3, QY_max.2, QY_max.1, QY_max.0) %>% 
   melt(id = c("Chamber", "Microbe"))
-View(exp1.qy)
 
 ggplot(data = exp1.qy, aes(x = variable, y = value, fill = Chamber)) + geom_boxplot(colour = "black") + facet_grid(. ~ Microbe) + scale_x_discrete(limits = c("QY_max.0", "QY_max.1", "QY_max.2", "QY_max.3", "QY_max.4"), labels = c("Week 0", "Week 1", "Week 2", "Week 3", "Week 4")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
 ```
 
 ### Week 0
-```{r}
+```{r QY_max.0}
 wk0.sum <- Exp1 %>% 
   dplyr::select(Sample, Chamber, Microbe, QY_max.0) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -141,7 +141,7 @@ wk0.sum <- Exp1 %>%
 ```
 
 ### Week 1
-```{r}
+```{r QY_max.1}
 wk1.sum <- Exp1 %>% 
   select(Sample, Chamber, Microbe, QY_max.1) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -154,7 +154,7 @@ wk1.sum <- Exp1 %>%
 ```
 
 ### Week 2
-```{r}
+```{r QY_max.2}
 wk2.sum <- Exp1 %>% 
   select(Sample, Chamber, Microbe, QY_max.2) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -167,7 +167,7 @@ wk2.sum <- Exp1 %>%
 ```
 
 ### Week 3
-```{r}
+```{r QY_max.3}
 wk3.sum <- Exp1 %>% 
   select(Sample, Chamber, Microbe, QY_max.3) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -179,8 +179,8 @@ wk3.sum <- Exp1 %>%
   )
 ```
 
-## Week 4
-```{r}
+### Week 4
+```{r QY_max.4}
 wk4.sum <- Exp1 %>% 
   select(Sample, Chamber, Microbe, QY_max.4) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -194,58 +194,95 @@ wk4.sum <- Exp1 %>%
 
 In general, there was no significant main effects of the microbial community on QY_Max across the four weeks of Experiment 1.  The temperature of the chamber, not the microbial community, appeared to regulate QY_Max heavily in Weeks 0 and 1, though only until Week 3. As the experiment progressed, cross-over interactions between chamber temperature and microbial communities led to significant interaction terms (p < 0.05), despite no main effect of the microbial community. This suggests that QY_Max likely depends on how microbial communities influence moss within each chamber despite hte lack of a main effect. 
 
-## Percent loss
+## Mortality
 Mortality rate is usually expressed as **death** in a defined **population** during a specified **interval**. In this case, we do not necessarily have individual death per day or per each week. Therefore, percent loss of fluorescence from Week 0 QY will be used as proxy to represent moss death as the treatment continues.
 
-```{r Percent Loss}
+Note: decided to calculate percet of fluorscence left (100% - percent lost) at the end of each week instead of purely percet loss to show a declining graph instead of an increasing graph which could be more confusing to interpret.
+
+```{r Exp 1. Percent Left}
 # isolating just the QY data
 # calculating percent left (100% - percent loss)
-exp1.qy.loss <- Exp1 %>% 
+exp1.qy.left <- Exp1 %>% 
   dplyr::select(Chamber, Microbe, QY_max.1, QY_max.2, QY_max.3, QY_max.4, QY_max.0) %>%
-  mutate(percent_loss1 = (100 - (((QY_max.0 - QY_max.1)/QY_max.0)*100))) %>% 
-  mutate(percent_loss2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
-  mutate(percent_loss3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100))) %>%  
-  mutate(percent_loss4 = (100 - (((QY_max.0 - QY_max.4)/QY_max.0)*100))) 
-View(exp1.qy.loss)
+  mutate(percent_left1 = (100 - (((QY_max.0 - QY_max.1)/QY_max.0)*100))) %>% 
+  mutate(percent_left2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
+  mutate(percent_left3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100))) %>%  
+  mutate(percent_left4 = (100 - (((QY_max.0 - QY_max.4)/QY_max.0)*100))) 
+View(exp1.qy.left)
 
 # summary percent left
-exp1.qyleft <- exp1.qy.loss %>% 
-  select(Chamber, Microbe, percent_loss1, percent_loss2,percent_loss3, percent_loss4) %>% 
+# make this into a table
+qyleft.summary <- exp1.qy.left %>% 
+  select(Chamber, Microbe, percent_left1, percent_left2,percent_left3, percent_left4) %>% 
    group_by(Chamber, Microbe) %>% 
-   summarise_all(funs(mean, sd))
-View(exp1.qyleft)
-  
-# plot of percent left
-exp1.qy.loss <- exp1.qy.loss %>% 
-  dplyr::select(Chamber, Microbe, percent_loss1, percent_loss2, percent_loss3, percent_loss4)  %>% 
+   summarise_all(funs(mean, sd, std.error))
+
+# preparation for plotting
+exp1.qy.left <- exp1.qy.left %>%
+  dplyr::select(Chamber, Microbe, percent_left1, percent_left2,percent_left3, percent_left4) %>%
   melt(id = c("Chamber", "Microbe"))
-View(exp1.qy.loss)
+
 
 # mean over time
-ggplot(data = exp1.qy.loss, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3", "percent_loss4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+ggplot(data = exp1.qy.left, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2","percent_left3", "percent_left4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
 
 # boxplot over time
-test <- ggplot(data = exp1.qy.loss, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3", "percent_loss4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
+ggplot(data = exp1.qy.left, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2","percent_left3", "percent_left4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
 
 ```
 
-
-## Percent Loss ANOVA
+Percent Loss ANOVA
+NOte: have to redo this. it is a repeated measures MANOVA (chamber x microbe x week )
 ```{r Percent Loss ANOVA}
 
-qyloss.aov <- aov(value ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
-summary(qyloss.aov)
+# qyleft.aov <- aov(value ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
+# summary(qyloss.aov)
 
 # rank transforming percentage data
-qy1.rank <- rank(exp1.qy$percent_loss)
-exp1.qy <- cbind(exp1.qy, qy1.rank)
+# qy1.rank <- rank(exp1.qy$percent_loss)
+# exp1.qy <- cbind(exp1.qy, qy1.rank)
 
-qyloss.rank.aov <- aov(qy1.rank ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
-summary(qyloss.rank.aov) # cross-over interaction -> no overall effect on percent loss BUT the effect of microbe on percent loss is opposite depending on chamber. 
+# qyloss.rank.aov <- aov(qy1.rank ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
+# summary(qyloss.rank.aov) # cross-over interaction -> no overall effect on percent loss BUT the effect of microbe on percent loss is opposite depending on chamber. 
 
-TukeyHSD(qyloss.rank.aov)
+# TukeyHSD(qyloss.rank.aov)
 ```
 
+```{r Exp 1. Two-way repeated measures MANOVA}
+# setting up dataframe
+exp1.qy.left <- exp1.qy.left %>% 
+  select(Chamber, Microbe, percent_left1, percent_left2, percent_left3, percent_left4) %>% 
+  melt(id = c("Chamber", "Microbe"))
+exp1.qy.left$ID <- seq.int(nrow(exp1.qy.left))
+View(exp1.qy.left)
+
+# rank transforming percentage data
+qy1.rank <- rank(exp1.qy.left$value)
+exp1.qy.left <- cbind(exp1.qy.left, qy1.rank)
+View(exp1.qy.left)
+
+# establishing factors
+exp1.qy.left  <- within(exp1.qy.left, {
+  Chamber <- factor(Chamber)
+  Microbe <- factor(Microbe)
+  variable <- factor(variable)
+})
+
+# means 
+exp1.qyleft.sum <- exp1.qy.left %>% 
+  group_by(Chamber, Microbe, variable) %>% 
+  summarise(mean = mean(value))
+
+# ANOVA
+qy1.left.aov <- with(exp1.qy.left,
+               aov(qy1.rank ~ variable*Chamber*Microbe + Error(ID / (Chamber*Microbe))))
+summary(qy1.left.aov)
+```
+
+Source code: https://datascienceplus.com/two-way-anova-with-repeated-measures/
+https://biostats.w.uib.no/factorial-repeated-measures-anova-two-way-repeated-measures-anova/
+https://stats.stackexchange.com/questions/264171/how-to-do-two-way-repeated-measures-anova-using-aov-in-r
+validate with: https://www.r-bloggers.com/r-tutorial-series-two-way-repeated-measures-anova/ if time 
 # Experiment 2 
 
 ## Summary Statistics
@@ -263,7 +300,7 @@ Exp2_data_summary <- Exp2 %>%
   )
 ```
 
-```{r, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.2_cap}
+```{r Figure 2, echo=FALSE, fig.width = 15, fig.height=10, fig.align='center',fig.cap = fig.2_cap}
 ggplot(Exp2_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
   geom_bar(position=position_dodge(), stat = "identity") +
   geom_errorbar(aes(ymin=mean-se, ymax=mean+se), width=0.2,
@@ -279,7 +316,7 @@ ggplot(data = Exp2, aes(x = Growth.rate.mmperday)) + geom_histogram(binwidth = 0
 ```
 
 ## Rank Transform
-```{r}
+```{r Exp 2. Ranked ANOVA}
 exp2.rank <- rank(Exp2$Growth.rate.mmperday)
 
 # merge ranked data
@@ -306,7 +343,7 @@ When comparing microbial treatments across chambers, it is apparent that elevate
 
 
 ## QY
-```{r}
+```{r Exp 2. Weekly QY Figure}
 exp2.qy <- Exp2 %>% 
   select(Chamber, Microbe, QY_max.3, QY_max.2, QY_max.1, QY_max.0) %>% 
   melt(id = c("Chamber", "Microbe"))
@@ -315,7 +352,7 @@ ggplot(data = exp2.qy, aes(x = variable, y = value, fill = Chamber)) + geom_boxp
 ```
 
 ### Week 0
-```{r, echo=FALSE, warning=FALSE}
+```{r Exp2 QY_max.0, echo=FALSE, warning=FALSE}
 wk0.sum2 <- Exp2 %>% 
   select(Sample, Chamber, Microbe, QY_max.0) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -328,7 +365,7 @@ wk0.sum2 <- Exp2 %>%
 ```
 
 ### Week 1
-```{r, echo=FALSE, warning=FALSE}
+```{r Exp2 QY_max.1, echo=FALSE, warning=FALSE}
 wk1.sum2 <- Exp2 %>% 
   dplyr::select(Sample, Chamber, Microbe, QY_max.2) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -341,7 +378,7 @@ wk1.sum2 <- Exp2 %>%
 ```
 
 ### Week 2
-```{r, echo=FALSE, warning=FALSE}
+```{r Exp2 QY_max.2, echo=FALSE, warning=FALSE}
 wk2.sum2 <- Exp2 %>% 
   dplyr::select(Sample, Chamber, Microbe, QY_max.2) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -354,7 +391,7 @@ wk2.sum2 <- Exp2 %>%
 ```
 
 ### Week 3
-```{r, echo=FALSE, warning=FALSE}
+```{r Exp2 QY_max.3, echo=FALSE, warning=FALSE}
 wk3.sum2 <- Exp2 %>% 
   dplyr::select(Sample, Chamber, Microbe, QY_max.3) %>% 
   group_by(Chamber, Microbe) %>% 
@@ -366,51 +403,83 @@ wk3.sum2 <- Exp2 %>%
   )
 ```
 
-## Percent Loss
+## Mortality
 Question, why the NAs? Were those dead or just not measured?
-```{r}
+```{r Exp 2. Percent Left}
 # isolating just the QY data
 # calculating percent left (100% - percent loss)
-exp2.qy.loss <- Exp2 %>% 
+exp2.qy.left <- Exp2 %>% 
   dplyr::select(Sample, Chamber, Microbe, QY_max.1, QY_max.2, QY_max.3, QY_max.0) %>%
-  mutate(percent_loss1 = (100 - (((QY_max.0 - QY_max.1)/QY_max.0)*100))) %>% 
-  mutate(percent_loss2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
-  mutate(percent_loss3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100)))
-View(exp2.qy.loss)
+  mutate(percent_left1 = (100 - (((QY_max.0 - QY_max.1)/QY_max.0)*100))) %>% 
+  mutate(percent_left2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
+  mutate(percent_left3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100)))
 
 # summary percent left
-exp2.qyleft <- exp2.qy.loss %>% 
-  select(Chamber, Microbe, percent_loss1, percent_loss2,percent_loss3) %>% 
+# make this into a table
+exp2.qyleft.sum <- exp2.qy.left %>% 
+  select(Chamber, Microbe, percent_left1, percent_left2,percent_left3) %>% 
    group_by(Chamber, Microbe) %>% 
-   summarise_all(funs(mean, sd))
-View(exp2.qyleft)
+   summarise_all(funs(mean, sd, std.error))
 
-# plot of percent left
-exp2.qy.left <- exp1.qy.left %>% 
-  dplyr::select(Chamber, Microbe, percent_loss1, percent_loss2, percent_loss3)  %>% 
+# prep for plotting percent left
+exp2.qy.left <- exp2.qy.left %>% 
+  dplyr::select(Chamber, Microbe, percent_left1, percent_left2, percent_left3)  %>% 
   melt(id = c("Chamber", "Microbe"))
-View(exp2.qy.left)
 
 # mean over time
-ggplot(data = exp2.qy.loss, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+ggplot(data = exp2.qy.left, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2", "percent_left3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
 
 # boxplot over time
-test <- ggplot(data = exp2.qy.loss, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_loss1", "percent_loss2", "percent_loss3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
+ggplot(data = exp2.qy.left, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2", "percent_left3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) 
+
 ```
 
-```{r}
-
-qyloss.aov2 <- aov(percent_loss ~ Chamber + Microbe + Chamber:Microbe, data = exp2.qy.loss)
-summary(qyloss.aov2)
+```{r Exp 2. Percent Left ANOVA}
+# have to redo. this one is a repeated measures manova
+# qyloss.aov2 <- aov(percent_loss ~ Chamber + Microbe + Chamber:Microbe, data = exp2.qy.loss)
+# summary(qyloss.aov2)
 
 # rank transforming percentage data
-qy2.rank <- rank(exp2.qy.loss$percent_loss)
-exp2.qy <- cbind(exp2.qy, qy2.rank)
+# qy2.rank <- rank(exp2.qy.loss$percent_loss)
+# exp2.qy <- cbind(exp2.qy, qy2.rank)
 
-qyloss.rank.aov2 <- aov(qy2.rank ~ Chamber + Microbe + Chamber:Microbe, data = exp2.qy)
-summary(qyloss.rank.aov2) 
+# qyloss.rank.aov2 <- aov(qy2.rank ~ Chamber + Microbe + Chamber:Microbe, data = exp2.qy)
+# summary(qyloss.rank.aov2) 
 
-TukeyHSD(qyloss.rank.aov2)
+# TukeyHSD(qyloss.rank.aov2)
 ```
+
+```{r Exp 2. Two-way repeated measures MANOVA}
+
+# setting up dataframe
+exp2.qy.left <- exp2.qy.left %>% 
+  select(Chamber, Microbe, percent_left1, percent_left2, percent_left3) %>% 
+  melt(id = c("Chamber", "Microbe"))
+exp2.qy.left$ID <- seq.int(nrow(exp2.qy.left))
+View(exp2.qy.left)
+
+# rank transforming percentage data
+qy2.rank <- rank(exp2.qy.left$value)
+exp2.qy.left <- cbind(exp2.qy.left, qy2.rank)
+View(exp2.qy.left)
+
+# establishing factors
+exp2.qy.left  <- within(exp2.qy.left, {
+  Chamber <- factor(Chamber)
+  Microbe <- factor(Microbe)
+  variable <- factor(variable)
+})
+
+# means 
+exp2.qyleft.sum <- exp2.qy.left %>% 
+  group_by(Chamber, Microbe, variable) %>% 
+  summarise(mean = mean(value))
+
+# ANOVA
+qy2.left.aov <- with(exp2.qy.left,
+               aov(qy2.rank ~ variable*Chamber*Microbe + Error(ID / (Chamber*Microbe))))
+summary(qy2.left.aov)
+```
+
 The conditioned microbiome was a primary determinant of QY_Max in Experiment 2. With the exception of the last week (Week 3), the microbiome was the most significant factor in QY_Max. In contrast to Experiment 1, there was only one instance where there appeared to be a strong interaction between the conditioned microbiome and the chamber (Week 2). Typically, it was the microbiome that drove differences in QY_Max between and within both chambers. 
 
