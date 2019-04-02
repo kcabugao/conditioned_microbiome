@@ -208,7 +208,6 @@ exp1.qy.left <- Exp1 %>%
   mutate(percent_left2 = (100 - (((QY_max.0 - QY_max.2)/QY_max.0)*100))) %>%   
   mutate(percent_left3 = (100 - (((QY_max.0 - QY_max.3)/QY_max.0)*100))) %>%  
   mutate(percent_left4 = (100 - (((QY_max.0 - QY_max.4)/QY_max.0)*100))) 
-View(exp1.qy.left)
 
 # summary percent left
 # make this into a table
@@ -218,63 +217,53 @@ qyleft.summary <- exp1.qy.left %>%
    summarise_all(funs(mean, sd, std.error))
 
 # preparation for plotting
-exp1.qy.left <- exp1.qy.left %>%
+exp1.qy.prep <- exp1.qy.left %>%
   dplyr::select(Chamber, Microbe, percent_left1, percent_left2,percent_left3, percent_left4) %>%
   melt(id = c("Chamber", "Microbe"))
 
 
 # mean over time
-ggplot(data = exp1.qy.left, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2","percent_left3", "percent_left4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+exp1.qy.meanplot <- ggplot(data = exp1.qy.prep, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2","percent_left3", "percent_left4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+
+pdf("Exp1_QYMean.pdf")
+plot(exp1.qy.meanplot)
+dev.off()
 
 # boxplot over time
-ggplot(data = exp1.qy.left, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2","percent_left3", "percent_left4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
+exp1.qy.boxplot <- ggplot(data = exp1.qy.prep, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2","percent_left3", "percent_left4"), labels = c("Week 1", "Week 2", "Week 3", "Week 4")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank())
+
+pdf("Exp1_QYBoxplot.pdf")
+plot(exp1.qy.meanplot)
+dev.off()
 
 ```
 
-Percent Loss ANOVA
-NOte: have to redo this. it is a repeated measures MANOVA (chamber x microbe x week )
-```{r Percent Loss ANOVA}
-
-# qyleft.aov <- aov(value ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
-# summary(qyloss.aov)
-
-# rank transforming percentage data
-# qy1.rank <- rank(exp1.qy$percent_loss)
-# exp1.qy <- cbind(exp1.qy, qy1.rank)
-
-# qyloss.rank.aov <- aov(qy1.rank ~ Chamber + Microbe + Chamber:Microbe, data = exp1.qy)
-# summary(qyloss.rank.aov) # cross-over interaction -> no overall effect on percent loss BUT the effect of microbe on percent loss is opposite depending on chamber. 
-
-# TukeyHSD(qyloss.rank.aov)
-```
 
 ```{r Exp 1. Two-way repeated measures MANOVA}
 # setting up dataframe
-exp1.qy.left <- exp1.qy.left %>% 
+exp1.qy.manova <- exp1.qy.left %>% 
   select(Chamber, Microbe, percent_left1, percent_left2, percent_left3, percent_left4) %>% 
   melt(id = c("Chamber", "Microbe"))
-exp1.qy.left$ID <- seq.int(nrow(exp1.qy.left))
-View(exp1.qy.left)
+exp1.qy.manova$ID <- seq.int(nrow(exp1.qy.manova))
 
 # rank transforming percentage data
-qy1.rank <- rank(exp1.qy.left$value)
-exp1.qy.left <- cbind(exp1.qy.left, qy1.rank)
-View(exp1.qy.left)
+qy1.rank <- rank(exp1.qy.manova$value)
+exp1.qy.manova  <- cbind(exp1.qy.manova, qy1.rank)
 
 # establishing factors
-exp1.qy.left  <- within(exp1.qy.left, {
+exp1.qy.manova <- within(exp1.qy.manova, {
   Chamber <- factor(Chamber)
   Microbe <- factor(Microbe)
   variable <- factor(variable)
 })
 
 # means 
-exp1.qyleft.sum <- exp1.qy.left %>% 
+exp1.qymanova.sum <- exp1.qy.manova %>% 
   group_by(Chamber, Microbe, variable) %>% 
   summarise(mean = mean(value))
 
 # ANOVA
-qy1.left.aov <- with(exp1.qy.left,
+qy1.left.aov <- with(exp1.qy.manova,
                aov(qy1.rank ~ variable*Chamber*Microbe + Error(ID / (Chamber*Microbe))))
 summary(qy1.left.aov)
 ```
@@ -283,6 +272,7 @@ Source code: https://datascienceplus.com/two-way-anova-with-repeated-measures/
 https://biostats.w.uib.no/factorial-repeated-measures-anova-two-way-repeated-measures-anova/
 https://stats.stackexchange.com/questions/264171/how-to-do-two-way-repeated-measures-anova-using-aov-in-r
 validate with: https://www.r-bloggers.com/r-tutorial-series-two-way-repeated-measures-anova/ if time 
+
 # Experiment 2 
 
 ## Summary Statistics
@@ -315,11 +305,18 @@ ggplot(Exp2_data_summary, aes (x=Chamber, y=mean, fill=Microbe)) +
 ggplot(data = Exp2, aes(x = Growth.rate.mmperday)) + geom_histogram(binwidth = 0.5, aes(y = ..density..), colour = "black", fill = "white") + geom_density(alpha=0.2, fill="#FF6666") + ggtitle("Density Histogram of Experiment 2 Growth Rate") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + xlab("Growth rate (mm/day)") + ylab("Density")
 ```
 
+
+Differences in moss growth rate were based on the influence of microbial treatments in the chambers (p <0.001). Within the ambient temperature chamber (AT), moss grown with AC and moss grown with EC increased growth rate relative to the control (p < 0.05). However, there were no differences in growth between AC and EC suggesting that under ambient temperature, microbial inoculation increases growth irregardless of microbial community diversity. 
+
+Elevated temperatures differentiated the influence of the microbial community on moss growth rate. Moss inoculated with a microbial community conditioned in elevated temperatures had high rates of growth despite elevated temperatures with respect to moss grown with ambient conditioned microbiomes (AC) and the control (p < 0.001). Furthermore, AC moss and control moss did not differ in growth rate suggesting that it is specifically a pre-adapted microbiome that imparts moss with the capacity to tolerate elevated temperatures. 
+
+When comparing microbial treatments across chambers, it is apparent that elevated temperatures severely decreased growth of moss with AC and moss control. Only moss inoculated with EC showed no difference in growth regardless of ambient or elevated temperatures. This indicates that the presence of microbial members capable of surviving in elevated temperatures is generally beneficial, but is especially critical in rising temperatures. 
+
 ## Rank Transform
-```{r Exp 2. Ranked ANOVA}
+```{r Exp 2 . Ranked ANOVA}
 exp2.rank <- rank(Exp2$Growth.rate.mmperday)
 
-# merge ranked data
+# binding transform
 Exp2 <- cbind(Exp2, exp2.rank)
 
 # two-way ANOVA with ranked data
@@ -333,14 +330,6 @@ amod <- aov(exp2.rank ~ tx, data = Exp2)
 groups <- HSD.test(amod, "tx", group = TRUE)
 groups
 ```
-
-Differences in moss growth rate were based on the influence of microbial treatments in the chambers (p <0.001). Within the ambient temperature chamber (AT), moss grown with AC and moss grown with EC increased growth rate relative to the control (p < 0.05). However, there were no differences in growth between AC and EC suggesting that under ambient temperature, microbial inoculation increases growth irregardless of microbial community diversity. 
-
-Elevated temperatures differentiated the influence of the microbial community on moss growth rate. Moss inoculated with a microbial community conditioned in elevated temperatures had high rates of growth despite elevated temperatures with respect to moss grown with ambient conditioned microbiomes (AC) and the control (p < 0.001). Furthermore, AC moss and control moss did not differ in growth rate suggesting that it is specifically a pre-adapted microbiome that imparts moss with the capacity to tolerate elevated temperatures. 
-
-When comparing microbial treatments across chambers, it is apparent that elevated temperatures severely decreased growth of moss with AC and moss control. Only moss inoculated with EC showed no difference in growth regardless of ambient or elevated temperatures. This indicates that the presence of microbial members capable of surviving in elevated temperatures is generally beneficial, but is especially critical in rising temperatures. 
-
-
 
 ## QY
 ```{r Exp 2. Weekly QY Figure}
@@ -422,61 +411,51 @@ exp2.qyleft.sum <- exp2.qy.left %>%
    summarise_all(funs(mean, sd, std.error))
 
 # prep for plotting percent left
-exp2.qy.left <- exp2.qy.left %>% 
+exp2.qy.prep <- exp2.qy.left %>% 
   dplyr::select(Chamber, Microbe, percent_left1, percent_left2, percent_left3)  %>% 
   melt(id = c("Chamber", "Microbe"))
 
 # mean over time
-ggplot(data = exp2.qy.left, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2", "percent_left3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+exp2.qymeanplot <- ggplot(data = exp2.qy.prep, aes(x = variable, y = value,group=1)) + geom_point(stat = 'summary', fun.y=mean) + stat_summary(fun.y = mean, geom = "line") + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2", "percent_left3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("Mean QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) + scale_y_continuous(limits = c(0, 100))
+
+pdf("Exp2_QYMean.pdf")
+plot(exp2.qymeanplot)
+dev.off()
 
 # boxplot over time
-ggplot(data = exp2.qy.left, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2", "percent_left3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) 
+exp2.boxplot <- ggplot(data = exp2.qy.prep, aes(x = variable, y = value)) + geom_boxplot() + facet_grid(Microbe ~ Chamber) + scale_x_discrete(limits = c("percent_left1", "percent_left2", "percent_left3"), labels = c("Week 1", "Week 2", "Week 3")) + ylab("QY Max") + theme_bw() + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank()) + theme(axis.title.x = element_blank()) 
 
+pdf("Exp2_Boxplot.pdf")
+plot(exp2.boxplot)
+dev.off()
 ```
 
-```{r Exp 2. Percent Left ANOVA}
-# have to redo. this one is a repeated measures manova
-# qyloss.aov2 <- aov(percent_loss ~ Chamber + Microbe + Chamber:Microbe, data = exp2.qy.loss)
-# summary(qyloss.aov2)
-
-# rank transforming percentage data
-# qy2.rank <- rank(exp2.qy.loss$percent_loss)
-# exp2.qy <- cbind(exp2.qy, qy2.rank)
-
-# qyloss.rank.aov2 <- aov(qy2.rank ~ Chamber + Microbe + Chamber:Microbe, data = exp2.qy)
-# summary(qyloss.rank.aov2) 
-
-# TukeyHSD(qyloss.rank.aov2)
-```
 
 ```{r Exp 2. Two-way repeated measures MANOVA}
-
 # setting up dataframe
-exp2.qy.left <- exp2.qy.left %>% 
+exp2.qy.manova <- exp2.qy.left %>% 
   select(Chamber, Microbe, percent_left1, percent_left2, percent_left3) %>% 
   melt(id = c("Chamber", "Microbe"))
-exp2.qy.left$ID <- seq.int(nrow(exp2.qy.left))
-View(exp2.qy.left)
+exp2.qy.manova$ID <- seq.int(nrow(exp2.qy.left))
 
 # rank transforming percentage data
-qy2.rank <- rank(exp2.qy.left$value)
-exp2.qy.left <- cbind(exp2.qy.left, qy2.rank)
-View(exp2.qy.left)
+qy2.rank <- rank(exp2.qy.manova$value)
+exp2.qy.manova <- cbind(exp2.qy.manova, qy2.rank)
 
 # establishing factors
-exp2.qy.left  <- within(exp2.qy.left, {
+exp2.qy.manova <- within(exp2.qy.manova, {
   Chamber <- factor(Chamber)
   Microbe <- factor(Microbe)
   variable <- factor(variable)
 })
 
 # means 
-exp2.qyleft.sum <- exp2.qy.left %>% 
+exp2.qymanova.sum <- exp2.qy.manova %>% 
   group_by(Chamber, Microbe, variable) %>% 
   summarise(mean = mean(value))
 
 # ANOVA
-qy2.left.aov <- with(exp2.qy.left,
+qy2.left.aov <- with(exp2.qy.manova,
                aov(qy2.rank ~ variable*Chamber*Microbe + Error(ID / (Chamber*Microbe))))
 summary(qy2.left.aov)
 ```
